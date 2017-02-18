@@ -1,5 +1,6 @@
 import numpy as np
 import random 
+import matplotlib.pyplot as plt
 
 def bandit_run():
     ARM_COUNT = 10
@@ -7,15 +8,15 @@ def bandit_run():
     EPSILON = 0.1 # Epsilon [0,1) value to be used for epsilon-greedy strategy
 
     # initialize true action values by sampling standard normal distribution 
-    action_values = np.random.randn(1, ARM_COUNT)
+    action_values = np.random.randn(ARM_COUNT, 1)
 
     optimal_action = np.argmax(action_values)
 
     # initialize value estimates to zero for epsilon greedy methods
-    value_estimates = np.zeros(1, ARM_COUNT)
+    value_estimates = np.zeros((ARM_COUNT, 1)) 
 
     # initialize the number of times each bandit arm has been pulled to zero
-    pull_count = np.zeros(1, ARM_COUNT)
+    pull_count = np.zeros((ARM_COUNT, 1))
 
     # tracks if optimal action was chosen in the time step
     is_optimal = [] 
@@ -52,7 +53,7 @@ def bandit_run():
     return (rewards, is_optimal)
 
 results = []
-RUNS = 20
+RUNS = 100
 MAX_STEPS = 1000
 
 rewards_in_runs = []
@@ -66,11 +67,21 @@ for i in xrange(RUNS):
 reward_matrix     = np.array(rewards_in_runs) 
 optimality_matrix = np.array(optimal_in_runs) 
 
-print(reward_matrix.shape)
-print(optimality_matrix.shape)
-
 avg_rewards    = np.mean(reward_matrix, axis=0)
 avg_optimality = np.mean(optimality_matrix, axis=0)
+avg_optimality = avg_optimality * 100
 
-np.savetxt('rewards.txt', avg_rewards, fmt='%.2f')
-np.savetxt('optimality.txt', avg_optimality, fmt='%.2f')
+#np.savetxt('rewards.txt', avg_rewards, fmt='%.2f')
+#np.savetxt('optimality.txt', avg_optimality, fmt='%.2f')
+
+plt.subplot(211)
+plt.plot(avg_rewards, 'r--')
+plt.ylabel('Average Reward')
+plt.xlabel('Steps')
+
+plt.subplot(212)
+plt.plot(avg_optimality, 'b--')
+plt.ylabel('Optimal Action %')
+plt.xlabel('Steps')
+
+plt.show()
