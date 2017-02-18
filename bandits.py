@@ -1,6 +1,6 @@
 import numpy as np
 import random 
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 
 def bandit_run():
     ARM_COUNT = 10
@@ -73,9 +73,9 @@ if __name__ == '__main__':
     avg_optimality = np.mean(optimality_matrix, axis=0)
     avg_optimality = avg_optimality * 100
 
-    #np.savetxt('rewards.txt', avg_rewards, fmt='%.2f')
-    #np.savetxt('optimality.txt', avg_optimality, fmt='%.2f')
-
+    np.savetxt('rewards.txt', avg_rewards, fmt='%.2f')
+    np.savetxt('optimality.txt', avg_optimality, fmt='%.2f')
+'''
     plt.subplot(211)
     plt.plot(avg_rewards, 'r--')
     plt.ylabel('Average Reward')
@@ -87,3 +87,4 @@ if __name__ == '__main__':
     plt.xlabel('Steps')
 
     plt.show()
+    '''
