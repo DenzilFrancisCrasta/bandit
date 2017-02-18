@@ -55,11 +55,17 @@ results = []
 RUNS = 20
 MAX_STEPS = 1000
 
-total_reward_in_step = 
+rewards_in_runs = []
+optimal_in_runs = []
 
 for i in xrange(RUNS):
-    results.append(bandit_run())
+    rewards, is_optimal = bandit_run()
+    rewards_in_runs.append(rewards)
+    optimal_in_runs.append(is_optimal)
 
-for rewards, is_optimal in results:
-    
+reward_matrix     = np.array(rewards_in_runs) 
+optimality_matrix = np.array(optimal_in_runs) 
+
+print(reward_matrix.shape)
+print(optimality_matrix.shape)
 
