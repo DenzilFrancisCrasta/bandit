@@ -41,7 +41,7 @@ def bandit_run():
         reward = np.random.standard_normal() + action_values[action]
 
         # maintain per step statistics 
-        is_optimal.append(action == optimal_action)
+        is_optimal.append(int(action == optimal_action))
         rewards.append(reward)
 
         # update the value estimates incrementally 
@@ -69,3 +69,8 @@ optimality_matrix = np.array(optimal_in_runs)
 print(reward_matrix.shape)
 print(optimality_matrix.shape)
 
+avg_rewards    = np.mean(reward_matrix, axis=0)
+avg_optimality = np.mean(optimality_matrix, axis=0)
+
+np.savetxt('rewards.txt', avg_rewards, fmt='%.2f')
+np.savetxt('optimality.txt', avg_optimality, fmt='%.2f')
