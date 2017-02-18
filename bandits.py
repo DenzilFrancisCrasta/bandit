@@ -52,36 +52,38 @@ def bandit_run():
 
     return (rewards, is_optimal)
 
-results = []
-RUNS = 100
-MAX_STEPS = 1000
+if __name__ == '__main__':
 
-rewards_in_runs = []
-optimal_in_runs = []
+    results = []
+    RUNS = 2000
+    MAX_STEPS = 1000
 
-for i in xrange(RUNS):
-    rewards, is_optimal = bandit_run()
-    rewards_in_runs.append(rewards)
-    optimal_in_runs.append(is_optimal)
+    rewards_in_runs = []
+    optimal_in_runs = []
 
-reward_matrix     = np.array(rewards_in_runs) 
-optimality_matrix = np.array(optimal_in_runs) 
+    for i in xrange(RUNS):
+        rewards, is_optimal = bandit_run()
+        rewards_in_runs.append(rewards)
+        optimal_in_runs.append(is_optimal)
 
-avg_rewards    = np.mean(reward_matrix, axis=0)
-avg_optimality = np.mean(optimality_matrix, axis=0)
-avg_optimality = avg_optimality * 100
+    reward_matrix     = np.array(rewards_in_runs) 
+    optimality_matrix = np.array(optimal_in_runs) 
 
-#np.savetxt('rewards.txt', avg_rewards, fmt='%.2f')
-#np.savetxt('optimality.txt', avg_optimality, fmt='%.2f')
+    avg_rewards    = np.mean(reward_matrix, axis=0)
+    avg_optimality = np.mean(optimality_matrix, axis=0)
+    avg_optimality = avg_optimality * 100
 
-plt.subplot(211)
-plt.plot(avg_rewards, 'r--')
-plt.ylabel('Average Reward')
-plt.xlabel('Steps')
+    #np.savetxt('rewards.txt', avg_rewards, fmt='%.2f')
+    #np.savetxt('optimality.txt', avg_optimality, fmt='%.2f')
 
-plt.subplot(212)
-plt.plot(avg_optimality, 'b--')
-plt.ylabel('Optimal Action %')
-plt.xlabel('Steps')
+    plt.subplot(211)
+    plt.plot(avg_rewards, 'r--')
+    plt.ylabel('Average Reward')
+    plt.xlabel('Steps')
 
-plt.show()
+    plt.subplot(212)
+    plt.plot(avg_optimality, 'b--')
+    plt.ylabel('Optimal Action %')
+    plt.xlabel('Steps')
+
+    plt.show()
