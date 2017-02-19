@@ -1,5 +1,5 @@
 import numpy as np
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import random
 
 class Bandit:
@@ -50,13 +50,13 @@ class ActionValueEstimator:
         ''' A single run of max_steps to estimate action values 
             using iterative sample average method '''
 
-        ARM_COUNT = self.bandit.get_arm_count()
+        arm_count = self.bandit.get_arm_count()
             
         # initialize value estimates to zero for epsilon greedy methods
-        value_estimates = np.zeros((ARM_COUNT, 1)) 
+        value_estimates = np.zeros((arm_count, 1)) 
     
         # initialize the number of times each bandit arm has been pulled to zero
-        pull_count = np.zeros((ARM_COUNT, 1))
+        pull_count = np.zeros((arm_count, 1))
 
         # tracks if optimal action was chosen in the time step
         is_optimal = [] 
@@ -83,11 +83,37 @@ class ActionValueEstimator:
         return (rewards, is_optimal)
 
 class DataMongerer:
-    ''' Collects data for the assignment questions and plots it '''
+    ''' Collects data for the assignment questions  '''
 
-    def __init__(self):
-        pass
+    def get_mean_run_statistics(self, epsilon=0.1, arm_count=10, runs=1, max_steps=1000):
+        ''' Utility method to calculate the average of rewards and 
+            fraction of optimal actions per step across runs of the value estimator '''
 
+        rewards_in_runs = []
+        optimal_in_runs = []
+
+        for i in xrange(runs):
+            # get rewards and optimality of action selection during a "run" of the action_value_estimator
+            bandit = Bandit(arm_count)
+            estimator = ActionValueEstimator(bandit, epsilon, max_steps)
+            rewards_per_step, optimal_action_fraction_per_step = estimator.action_value_estimate_run()
+
+            # save the "run" statistics 
+            rewards_in_runs.append(rewards_per_step)
+            optimal_in_runs.append(optimal_action_fraction_per_step)
+
+        # construct a 2D matrix of rewards where each row corresponds to the results of an individual run 
+        reward_matrix     = np.array(rewards_in_runs) 
+        optimality_matrix = np.array(optimal_in_runs) 
+
+        # mean reward across runs
+        avg_rewards    = np.mean(reward_matrix, axis=0)
+
+        # mean of fraction of optimal action selection
+        avg_optimality = np.mean(optimality_matrix, axis=0)
+        avg_optimality = avg_optimality * 100 # convert fractions into percentages
+
+        return (avg_rewards, avg_optimality) 
 
 
 if __name__ == '__main__':
@@ -95,38 +121,31 @@ if __name__ == '__main__':
     RUNS      = 2000
     MAX_STEPS = 1000
     ARM_COUNT = 10
+    epsilons  = [0.1, 0.01, 0]
 
-    # setup storage for data to be plotted
-    rewards_in_runs = []
-    optimal_in_runs = []
+    data_monger = DataMongerer()
+
+    to_plot_rewards = [] 
+    to_plot_optimality = []
+
+    for epsilon in epsilons:
+        avg_rewards, avg_optimality = data_monger.get_mean_run_statistics(epsilon, ARM_COUNT, RUNS, MAX_STEPS)
+        to_plot_rewards.append(avg_rewards)
+        to_plot_optimality.append(avg_optimality)
+        np.savetxt('oorewards'+ str(epsilon) +'.txt', avg_rewards, fmt='%.2f')
+        np.savetxt('oooptimality'+ str(epsilon) +'.txt', avg_optimality, fmt='%.2f')
 
 
-
-    for i in xrange(RUNS):
-        bandit = Bandit(ARM_COUNT)
-        estimator = ActionValueEstimator(bandit, epsilon=0.1, max_steps=MAX_STEPS)
-        rewards, is_optimal = estimator.action_value_estimate_run()
-        rewards_in_runs.append(rewards)
-        optimal_in_runs.append(is_optimal)
-
-    reward_matrix     = np.array(rewards_in_runs) 
-    optimality_matrix = np.array(optimal_in_runs) 
-
-    avg_rewards    = np.mean(reward_matrix, axis=0)
-    avg_optimality = np.mean(optimality_matrix, axis=0)
-    avg_optimality = avg_optimality * 100
-
-    np.savetxt('oorewards.txt', avg_rewards, fmt='%.2f')
-    np.savetxt('oooptimality.txt', avg_optimality, fmt='%.2f')
-
+    '''
     plt.subplot(211)
-    plt.plot(avg_rewards, 'r--')
+    plt.plot(avg_rewards, 'r')
     plt.ylabel('Average Reward')
     plt.xlabel('Steps')
 
     plt.subplot(212)
-    plt.plot(avg_optimality, 'b--')
+    plt.plot(avg_optimality, 'b')
     plt.ylabel('Optimal Action %')
     plt.xlabel('Steps')
 
     plt.show()
+    '''
