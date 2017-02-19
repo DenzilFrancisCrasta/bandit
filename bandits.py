@@ -129,24 +129,34 @@ class Plotter:
 
 if __name__ == '__main__':
 
+    # Assignment specific constants 
     RUNS      = 2000
     MAX_STEPS = 1000
     ARM_COUNT = 10
+    save_dir = 'plots/'
     epsilons  = [0.1, 0.01, 0]
 
 
-    to_plot_rewards = [] 
-    to_plot_optimality = []
+    rewards = [] 
+    optimality = []
 
     data_monger = DataMongerer()
 
     for epsilon in epsilons:
-        avg_rewards, avg_optimality = data_monger.get_mean_run_statistics(epsilon, ARM_COUNT, RUNS, MAX_STEPS)
-        to_plot_rewards.append(avg_rewards)
-        to_plot_optimality.append(avg_optimality)
-        np.savetxt('rewards'+ str(epsilon) +'.txt', avg_rewards, fmt='%.2f')
-        np.savetxt('optimality'+ str(epsilon) +'.txt', avg_optimality, fmt='%.2f')
+
+        # gather the avg reward and avg fraction of optimal actions for an epsilon
+        avg_r, avg_o = data_monger.get_mean_run_statistics(epsilon, ARM_COUNT, RUNS, MAX_STEPS)
+
+        rewards.append(avg_r)
+        optimality.append(avg_o)
+
+        np.savetxt(save_dir + 'rewards'+ str(epsilon) +'.txt', avg_r, fmt='%.2f')
+        np.savetxt(save_dir + 'optimality'+ str(epsilon) +'.txt', avg_o, fmt='%.2f')
 
     plotter = Plotter()
-    plotter.plot_curves(np.arange(MAX_STEPS)+1, to_plot_rewards, 'Steps', 'Average Reward', 'Average Reward')
-    plotter.plot_curves(np.arange(MAX_STEPS)+1, to_plot_optimality, 'Steps', 'Optimal Action %', 'Optimal Action %')
+
+    labels = { 'title' : 'Average Reward','xlabel': 'Steps', 'ylabel' : 'Average Reward' }
+    plotter.plot_curves(np.arange(MAX_STEPS)+1, rewards, labels)
+
+    labels = { 'title' : 'Optimal Action %','xlabel': 'Steps', 'ylabel' : 'Optimal Action %' }
+    plotter.plot_curves(np.arange(MAX_STEPS)+1, optimality, labels)
