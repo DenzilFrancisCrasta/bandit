@@ -1,9 +1,10 @@
 import numpy as np
+import matplotlib.pyplot as plt
 import random
 
 class Bandit:
-    ''' Multi arm bandit with true action values drawn from standard
-        normal distribution '''
+    ''' Simulates a multi-arm Bandit 
+        with true action values drawn from standard normal distribution '''
 
     def __init__(self, arm_count):
         self.arm_count = arm_count
@@ -12,32 +13,37 @@ class Bandit:
         self.true_action_values = np.random.randn(ARM_COUNT, 1)
 
     def pull_arm(self, arm_index):
-        # generate reward in response to pulling the arm which is 
-        # sampled from a normal distribution with mean around the true_action_value with variance 1
+        ''' generate reward in response to pulling the arm, 
+            sampled from a normal distribution with 
+            mean around the true_action_value with unit variance '''
         return np.random.standard_normal() + self.true_action_values[arm_index]
 
-    def get_arm_count():
+    def get_arm_count(self):
         return self.arm_count
 
-    def get_optimal_arm():
+    def get_optimal_arm(self):
         return np.argmax(self.true_action_values)
 
 
 class ActionValueEstimator:
+    ''' Estimates the action values of the arms of a mult-armed Bandit 
+        using iterative sample-average method '''
 
     def __init__(self, bandit, epsilon=0.1, max_steps=1000):
+        self.bandit = bandit
+        self.epsilon = epsilon
         self.max_steps = max_steps
 
-    def epsilon_greedy_choice(self):
+    def epsilon_greedy_choice(self, value_estimates):
         # With probability epsilon EXPLORE 
         if random.random() <= self.epsilon:
            # choose an arm among all arms uniformly 
-           action = random.randint(0, self.bandit.get_arm_count()-1)  
+           action = random.randint(0, value_estimates.shape[0]-1)  
 
         # With probability 1-epsilon EXPLOIT
         else:
            # choose the arm greedily
-           action = self.bandit.get_optimal_arm()
+           action = np.argmax(value_estimates)
         return action 
 
     def action_value_estimate_run(self):
@@ -60,7 +66,7 @@ class ActionValueEstimator:
 
         for step in xrange(self.max_steps):
             # select an arm using epsilon greedy approach
-            action = self.epsilon_greedy_choice()
+            action = self.epsilon_greedy_choice(value_estimates)
 
             # get reward associated with the arm 
             reward = self.bandit.pull_arm(action) 
@@ -76,6 +82,12 @@ class ActionValueEstimator:
 
         return (rewards, is_optimal)
 
+class DataMongerer:
+    ''' Collects data for the assignment questions and plots it '''
+
+    def __init__(self):
+        pass
+
 
 
 if __name__ == '__main__':
@@ -88,10 +100,11 @@ if __name__ == '__main__':
     rewards_in_runs = []
     optimal_in_runs = []
 
-    bandit = Bandit(ARM_COUNT)
-    estimator = ActionValueEstimator(bandit, epsilon=0.1, max_steps=MAX_STEPS)
+
 
     for i in xrange(RUNS):
+        bandit = Bandit(ARM_COUNT)
+        estimator = ActionValueEstimator(bandit, epsilon=0.1, max_steps=MAX_STEPS)
         rewards, is_optimal = estimator.action_value_estimate_run()
         rewards_in_runs.append(rewards)
         optimal_in_runs.append(is_optimal)
@@ -103,10 +116,9 @@ if __name__ == '__main__':
     avg_optimality = np.mean(optimality_matrix, axis=0)
     avg_optimality = avg_optimality * 100
 
-    np.savetxt('rewards.txt', avg_rewards, fmt='%.2f')
-    np.savetxt('optimality.txt', avg_optimality, fmt='%.2f')
+    np.savetxt('oorewards.txt', avg_rewards, fmt='%.2f')
+    np.savetxt('oooptimality.txt', avg_optimality, fmt='%.2f')
 
-    '''
     plt.subplot(211)
     plt.plot(avg_rewards, 'r--')
     plt.ylabel('Average Reward')
@@ -118,4 +130,3 @@ if __name__ == '__main__':
     plt.xlabel('Steps')
 
     plt.show()
-    '''
