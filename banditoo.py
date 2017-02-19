@@ -1,5 +1,5 @@
 import numpy as np
-#import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 import random
 
 class Bandit:
@@ -115,6 +115,17 @@ class DataMongerer:
 
         return (avg_rewards, avg_optimality) 
 
+class Plotter:
+
+    def plot_curves(self, x, y, xlabel, ylabel, title):
+        colors = ['k', 'r', 'g']
+        for i in xrange(len(y)):
+            plt.plot(x, y[i], colors[i])
+            plt.hold(True)
+        plt.xlabel(xlabel)
+        plt.ylabel(ylabel)
+        plt.show()
+
 
 if __name__ == '__main__':
 
@@ -123,29 +134,19 @@ if __name__ == '__main__':
     ARM_COUNT = 10
     epsilons  = [0.1, 0.01, 0]
 
-    data_monger = DataMongerer()
 
     to_plot_rewards = [] 
     to_plot_optimality = []
+
+    data_monger = DataMongerer()
 
     for epsilon in epsilons:
         avg_rewards, avg_optimality = data_monger.get_mean_run_statistics(epsilon, ARM_COUNT, RUNS, MAX_STEPS)
         to_plot_rewards.append(avg_rewards)
         to_plot_optimality.append(avg_optimality)
-        np.savetxt('oorewards'+ str(epsilon) +'.txt', avg_rewards, fmt='%.2f')
-        np.savetxt('oooptimality'+ str(epsilon) +'.txt', avg_optimality, fmt='%.2f')
+        np.savetxt('rewards'+ str(epsilon) +'.txt', avg_rewards, fmt='%.2f')
+        np.savetxt('optimality'+ str(epsilon) +'.txt', avg_optimality, fmt='%.2f')
 
-
-    '''
-    plt.subplot(211)
-    plt.plot(avg_rewards, 'r')
-    plt.ylabel('Average Reward')
-    plt.xlabel('Steps')
-
-    plt.subplot(212)
-    plt.plot(avg_optimality, 'b')
-    plt.ylabel('Optimal Action %')
-    plt.xlabel('Steps')
-
-    plt.show()
-    '''
+    plotter = Plotter()
+    plotter.plot_curves(np.arange(MAX_STEPS)+1, to_plot_rewards, 'Steps', 'Average Reward', 'Average Reward')
+    plotter.plot_curves(np.arange(MAX_STEPS)+1, to_plot_optimality, 'Steps', 'Optimal Action %', 'Optimal Action %')
