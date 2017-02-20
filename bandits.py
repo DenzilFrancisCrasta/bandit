@@ -117,13 +117,13 @@ class DataMongerer:
 
 class Plotter:
 
-    def plot_curves(self, x, y, xlabel, ylabel, title):
+    def plot_curves(self, x, y, labels):
         colors = ['k', 'r', 'g']
         for i in xrange(len(y)):
             plt.plot(x, y[i], colors[i])
             plt.hold(True)
-        plt.xlabel(xlabel)
-        plt.ylabel(ylabel)
+        plt.xlabel(labels['xlabel'])
+        plt.ylabel(labels['ylabel'])
         plt.show()
 
 
