@@ -48,22 +48,42 @@ class EpsilonGreedySelector(ActionSelector):
         return action 
 
     def __str__(self):
-        return str(self.epsilon)
+        return 'Epsilon ' + str(self.epsilon)
 
 class SoftmaxSelector(ActionSelector):
     ''' Softmax Action Selector '''
     def __init__(self, temperature):
         self.temperature = temperature
 
-    def select_action(self, value_estimates):
-        # subtract max of value_estimates from each value estimate to ensure numerical stability
-        max_adjusted_values = value_estimates - np.max(value_estimates)
+    def _softmax(self, value_estimates):
+        
+        # subtract the max exponent from all values for numerical stability
+        max_adjusted_values = np.exp( value_estimates - np.max(value_estimates)) 
 
-        e_raised_values = np.exp( max_adjusted_values / self.temperature)
-        return np.argmax(e_raised_values / np.sum(e_raised_values))
+        softmax_probabilities = max_adjusted_values / np.sum(max_adjusted_values)
+        return softmax_probabilities
+
+    def _inverse_transform_sample(self, pdf):
+        ''' returns samples from the probability distribution given by pdf 
+            using the technique of inverse transform sampling ''' 
+        # cumulative distribution function of the given pdf
+        cdf = np.cumsum(pdf)
+        # uniform random number representing the probability we want 
+        u = random.random()  
+        return np.searchsorted(cdf, u)
+        
+
+    def select_action(self, value_estimates):
+        tempered_values = value_estimates / float(self.temperature) 
+
+        # calculate the softmax probabilites of each action 
+        softmax_pdf = self._softmax(tempered_values)
+
+        # return the action index of an action drawn from the above softmax_pdf 
+        return self._inverse_transform_sample(softmax_pdf) 
 
     def __str__(self):
-        return str(self.temperature)
+        return 'Temperature ' + str(self.temperature)
 
 class ActionValueEstimator:
     ''' Estimates the action values of the arms of a mult-armed Bandit 
@@ -99,6 +119,7 @@ class ActionValueEstimator:
 
             # get reward associated with the arm 
             reward = self.bandit.pull_arm(action) 
+            #print("{0} action {1} reward {2}".format(self.action_selector, action ,reward))
 
             # store step-wide statistics to be plotted
             rewards.append(reward)
@@ -146,13 +167,15 @@ class DataMongerer:
 
 class Plotter:
 
-    def plot_curves(self, x, y, labels, colors):
+    def plot_curves(self, x, y, labels):
+        colors = ['k', 'r', 'g', 'y', 'm', 'b']
         for i in xrange(len(y)):
-            plt.plot(x, y[i], colors[i])
+            plt.plot(x, y[i], colors[i % len(colors)], label=labels['legends'][i])
             plt.hold(True)
-        plt.xlim([-10, 1001])
+        plt.xlim([-20, 1001])
         plt.xlabel(labels['xlabel'])
         plt.ylabel(labels['ylabel'])
+        plt.legend(loc='lower right')
         plt.show()
 
 class Assignment:
@@ -187,12 +210,13 @@ class Assignment:
 
         plotter = Plotter()
 
-        colors = ['k', 'r', 'g']
-        labels = { 'title' : 'Average Reward','xlabel': 'Steps', 'ylabel' : 'Average Reward' }
-        plotter.plot_curves(np.arange(MAX_STEPS)+1, rewards, labels, colors)
+        legends = [str(selector) for selector in action_selectors]
 
-        labels = { 'title' : 'Optimal Action %','xlabel': 'Steps', 'ylabel' : 'Optimal Action %' }
-        plotter.plot_curves(np.arange(MAX_STEPS)+1, optimality, labels, colors)
+        labels = { 'title' : 'Average Reward','xlabel': 'Steps', 'ylabel' : 'Average Reward', 'legends': legends}
+        plotter.plot_curves(np.arange(MAX_STEPS)+1, rewards, labels)
+
+        labels = { 'title' : 'Optimal Action %','xlabel': 'Steps', 'ylabel' : 'Optimal Action %', 'legends': legends }
+        plotter.plot_curves(np.arange(MAX_STEPS)+1, optimality, labels)
 
 
 
@@ -203,12 +227,13 @@ if __name__ == '__main__':
     MAX_STEPS = 1000
     ARM_COUNT = 10
     EPSILONS  = [0.1, 0.01, 0]
+    TEMPERTATURES = [0.001,0.1, 0.15, 0.2, 0.25]
 
     # instantiate a list of epsilon greedy action selectors to be evaluated  
     eps_greedy_selectors = [EpsilonGreedySelector(epsilon) for epsilon in EPSILONS]
+    softmax_selectors = [SoftmaxSelector(t) for t in TEMPERTATURES] 
 
     driver = Assignment()
-    driver.evaluate_action_selectors(eps_greedy_selectors, RUNS, MAX_STEPS, ARM_COUNT) 
+    driver.evaluate_action_selectors(softmax_selectors, RUNS, MAX_STEPS, ARM_COUNT) 
 
-    TEMPERTATURES = []
 
