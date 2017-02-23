@@ -24,27 +24,39 @@ class Bandit:
     def get_optimal_arm(self):
         return np.argmax(self.true_action_values)
 
+# STRATEGY PATTERN for action selectors 
+
+class ActionSelector:
+    ''' Abstract Action Selector that defines the interface for the strategy action selector methods '''
+    def select_action(self, value_estimates):
+        pass
+
+# concrete strategies 
+class EpsilonGreedySelector(ActionSelector):
+    ''' Epsilon greedy selector''' 
+    def __init__(self, epsilon = 0.1):
+        self.epsilon = epsilon
+
+    def select_action(self, value_estimates):
+        # With probability epsilon EXPLORE choose an arm among all arms uniformly 
+        if random.random() <= self.epsilon:
+           action = random.randint(0, value_estimates.shape[0]-1)  
+
+        # With probability 1-epsilon EXPLOIT choose the arm greedily
+        else:
+           action = np.argmax(value_estimates)
+        return action 
+
 
 class ActionValueEstimator:
     ''' Estimates the action values of the arms of a mult-armed Bandit 
         using iterative sample-average method '''
 
-    def __init__(self, bandit, epsilon=0.1, max_steps=1000):
+    def __init__(self, bandit, action_selector, max_steps=1000):
         self.bandit = bandit
-        self.epsilon = epsilon
         self.max_steps = max_steps
+        self.action_selector = action_selector
 
-    def epsilon_greedy_choice(self, value_estimates):
-        # With probability epsilon EXPLORE 
-        if random.random() <= self.epsilon:
-           # choose an arm among all arms uniformly 
-           action = random.randint(0, value_estimates.shape[0]-1)  
-
-        # With probability 1-epsilon EXPLOIT
-        else:
-           # choose the arm greedily
-           action = np.argmax(value_estimates)
-        return action 
 
     def action_value_estimate_run(self):
         ''' A single run of max_steps to estimate action values 
@@ -65,8 +77,8 @@ class ActionValueEstimator:
         rewards = []
 
         for step in xrange(self.max_steps):
-            # select an arm using epsilon greedy approach
-            action = self.epsilon_greedy_choice(value_estimates)
+            # select an arm using the strategy action selection routine
+            action = self.action_selector.select_action(value_estimates)
 
             # get reward associated with the arm 
             reward = self.bandit.pull_arm(action) 
@@ -85,7 +97,7 @@ class ActionValueEstimator:
 class DataMongerer:
     ''' Collects data for the assignment questions  '''
 
-    def get_mean_run_statistics(self, epsilon=0.1, arm_count=10, runs=1, max_steps=1000):
+    def get_mean_run_statistics(self, action_selector, arm_count=10, runs=1, max_steps=1000):
         ''' Utility method to calculate the average of rewards and 
             fraction of optimal actions per step across runs of the value estimator '''
 
@@ -95,7 +107,7 @@ class DataMongerer:
         for i in xrange(runs):
             # get rewards and optimality of action selection during a "run" of the action_value_estimator
             bandit = Bandit(arm_count)
-            estimator = ActionValueEstimator(bandit, epsilon, max_steps)
+            estimator = ActionValueEstimator(bandit, action_selector, max_steps)
             rewards_per_step, optimal_action_fraction_per_step = estimator.action_value_estimate_run()
 
             # save the "run" statistics 
@@ -117,8 +129,7 @@ class DataMongerer:
 
 class Plotter:
 
-    def plot_curves(self, x, y, labels):
-        colors = ['k', 'r', 'g']
+    def plot_curves(self, x, y, labels, colors):
         for i in xrange(len(y)):
             plt.plot(x, y[i], colors[i])
             plt.hold(True)
@@ -133,8 +144,8 @@ if __name__ == '__main__':
     RUNS      = 2000
     MAX_STEPS = 1000
     ARM_COUNT = 10
-    save_dir = 'plots/'
-    epsilons  = [0.1, 0.01, 0]
+    SAVE_DIR = 'plots/'
+    EPSILONS  = [0.1, 0.01, 0]
 
 
     rewards = [] 
@@ -142,21 +153,22 @@ if __name__ == '__main__':
 
     data_monger = DataMongerer()
 
-    for epsilon in epsilons:
+    for epsilon in EPSILONS:
 
         # gather the avg reward and avg fraction of optimal actions for an epsilon
-        avg_r, avg_o = data_monger.get_mean_run_statistics(epsilon, ARM_COUNT, RUNS, MAX_STEPS)
+        avg_r, avg_o = data_monger.get_mean_run_statistics(EpsilonGreedySelector(epsilon), ARM_COUNT, RUNS, MAX_STEPS)
 
         rewards.append(avg_r)
         optimality.append(avg_o)
 
-        np.savetxt(save_dir + 'rewards'+ str(epsilon) +'.txt', avg_r, fmt='%.2f')
-        np.savetxt(save_dir + 'optimality'+ str(epsilon) +'.txt', avg_o, fmt='%.2f')
+        np.savetxt(SAVE_DIR + 'rewards'+ str(epsilon) +'.txt', avg_r, fmt='%.2f')
+        np.savetxt(SAVE_DIR + 'optimality'+ str(epsilon) +'.txt', avg_o, fmt='%.2f')
 
     plotter = Plotter()
 
+    colors = ['k', 'r', 'g']
     labels = { 'title' : 'Average Reward','xlabel': 'Steps', 'ylabel' : 'Average Reward' }
-    plotter.plot_curves(np.arange(MAX_STEPS)+1, rewards, labels)
+    plotter.plot_curves(np.arange(MAX_STEPS)+1, rewards, labels, colors)
 
     labels = { 'title' : 'Optimal Action %','xlabel': 'Steps', 'ylabel' : 'Optimal Action %' }
-    plotter.plot_curves(np.arange(MAX_STEPS)+1, optimality, labels)
+    plotter.plot_curves(np.arange(MAX_STEPS)+1, optimality, labels, colors)
