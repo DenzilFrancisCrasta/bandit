@@ -33,7 +33,7 @@ class ActionSelector:
 
 # concrete strategies 
 class EpsilonGreedySelector(ActionSelector):
-    ''' Epsilon greedy selector''' 
+    ''' Epsilon Greedy Selector''' 
     def __init__(self, epsilon = 0.1):
         self.epsilon = epsilon
 
@@ -47,6 +47,23 @@ class EpsilonGreedySelector(ActionSelector):
            action = np.argmax(value_estimates)
         return action 
 
+    def __str__(self):
+        return str(self.epsilon)
+
+class SoftmaxSelector(ActionSelector):
+    ''' Softmax Action Selector '''
+    def __init__(self, temperature):
+        self.temperature = temperature
+
+    def select_action(self, value_estimates):
+        # subtract max of value_estimates from each value estimate to ensure numerical stability
+        max_adjusted_values = value_estimates - np.max(value_estimates)
+
+        e_raised_values = np.exp( max_adjusted_values / self.temperature)
+        return np.argmax(e_raised_values / np.sum(e_raised_values))
+
+    def __str__(self):
+        return str(self.temperature)
 
 class ActionValueEstimator:
     ''' Estimates the action values of the arms of a mult-armed Bandit 
@@ -133,9 +150,50 @@ class Plotter:
         for i in xrange(len(y)):
             plt.plot(x, y[i], colors[i])
             plt.hold(True)
+        plt.xlim([-10, 1001])
         plt.xlabel(labels['xlabel'])
         plt.ylabel(labels['ylabel'])
         plt.show()
+
+class Assignment:
+    ''' A Facade that implements each assignment question coordinating with the objects
+        required to solve each question of the assignment '''
+
+    SAVE_DIR = 'plots/'
+
+    # predicate "to save or not to save" run statistics on disk
+    save_statistics = False 
+
+    def evaluate_action_selectors(self, action_selectors, runs, max_steps, arm_count):  
+        ''' collects performance statistics of each action_selector
+            and plots the attributes avg reward and avg fraction of optimal actions '''
+
+        rewards = [] 
+        optimality = []
+
+        data_monger = DataMongerer()
+
+        for action_selector in action_selectors:
+
+            # gather the avg reward and avg fraction of optimal actions of an action_selector
+            avg_r, avg_o = data_monger.get_mean_run_statistics(action_selector, arm_count, runs, max_steps)
+
+            rewards.append(avg_r)
+            optimality.append(avg_o)
+
+            if Assignment.save_statistics == True:
+                np.savetxt(Assignment.SAVE_DIR + 'rewards'+ action_selector +'.txt', avg_r, fmt='%.2f')
+                np.savetxt(Assignment.SAVE_DIR + 'optimality'+ action_selector +'.txt', avg_o, fmt='%.2f')
+
+        plotter = Plotter()
+
+        colors = ['k', 'r', 'g']
+        labels = { 'title' : 'Average Reward','xlabel': 'Steps', 'ylabel' : 'Average Reward' }
+        plotter.plot_curves(np.arange(MAX_STEPS)+1, rewards, labels, colors)
+
+        labels = { 'title' : 'Optimal Action %','xlabel': 'Steps', 'ylabel' : 'Optimal Action %' }
+        plotter.plot_curves(np.arange(MAX_STEPS)+1, optimality, labels, colors)
+
 
 
 if __name__ == '__main__':
@@ -144,31 +202,13 @@ if __name__ == '__main__':
     RUNS      = 2000
     MAX_STEPS = 1000
     ARM_COUNT = 10
-    SAVE_DIR = 'plots/'
     EPSILONS  = [0.1, 0.01, 0]
 
+    # instantiate a list of epsilon greedy action selectors to be evaluated  
+    eps_greedy_selectors = [EpsilonGreedySelector(epsilon) for epsilon in EPSILONS]
 
-    rewards = [] 
-    optimality = []
+    driver = Assignment()
+    driver.evaluate_action_selectors(eps_greedy_selectors, RUNS, MAX_STEPS, ARM_COUNT) 
 
-    data_monger = DataMongerer()
+    TEMPERTATURES = []
 
-    for epsilon in EPSILONS:
-
-        # gather the avg reward and avg fraction of optimal actions for an epsilon
-        avg_r, avg_o = data_monger.get_mean_run_statistics(EpsilonGreedySelector(epsilon), ARM_COUNT, RUNS, MAX_STEPS)
-
-        rewards.append(avg_r)
-        optimality.append(avg_o)
-
-        np.savetxt(SAVE_DIR + 'rewards'+ str(epsilon) +'.txt', avg_r, fmt='%.2f')
-        np.savetxt(SAVE_DIR + 'optimality'+ str(epsilon) +'.txt', avg_o, fmt='%.2f')
-
-    plotter = Plotter()
-
-    colors = ['k', 'r', 'g']
-    labels = { 'title' : 'Average Reward','xlabel': 'Steps', 'ylabel' : 'Average Reward' }
-    plotter.plot_curves(np.arange(MAX_STEPS)+1, rewards, labels, colors)
-
-    labels = { 'title' : 'Optimal Action %','xlabel': 'Steps', 'ylabel' : 'Optimal Action %' }
-    plotter.plot_curves(np.arange(MAX_STEPS)+1, optimality, labels, colors)
