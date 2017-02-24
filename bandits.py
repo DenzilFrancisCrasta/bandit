@@ -151,11 +151,31 @@ class ActionValueEstimator:
 
         return (rewards, is_optimal)
 
-class DataMongerer:
-    ''' Collects data for the assignment questions  '''
+class Plotter:
 
-    def get_mean_run_statistics(self, action_selector, arm_count=10, runs=1, max_steps=1000):
-        ''' Utility method to calculate the average of rewards and 
+    def plot_curves(self, x, y, labels):
+        colors = ['k', 'r', 'g', 'y', 'm', 'b']
+        for i in xrange(len(y)):
+            plt.plot(x, y[i], colors[i % len(colors)], label=labels['legends'][i])
+            plt.hold(True)
+        plt.xlim([-20, 1001])
+        plt.xlabel(labels['xlabel'])
+        plt.ylabel(labels['ylabel'])
+        plt.title(labels['title'])
+        plt.legend(loc='lower right')
+        plt.show()
+
+class DataMongerer:
+    ''' Collects and plots data required to evaluate each assignment question 
+        by coordinating with the action_value_estimators and plotters '''
+
+    SAVE_DIR = 'plots/'
+
+    # predicate "to save or not to save" run statistics on disk
+    save_statistics = False 
+
+    def _get_mean_run_statistics(self, action_selector, arm_count=10, runs=1, max_steps=1000):
+        ''' internal utility method to calculate the average of rewards and 
             fraction of optimal actions per step across runs of the value estimator '''
 
         rewards_in_runs = []
@@ -184,28 +204,6 @@ class DataMongerer:
 
         return (avg_rewards, avg_optimality) 
 
-class Plotter:
-
-    def plot_curves(self, x, y, labels):
-        colors = ['k', 'r', 'g', 'y', 'm', 'b']
-        for i in xrange(len(y)):
-            plt.plot(x, y[i], colors[i % len(colors)], label=labels['legends'][i])
-            plt.hold(True)
-        plt.xlim([-20, 1001])
-        plt.xlabel(labels['xlabel'])
-        plt.ylabel(labels['ylabel'])
-        plt.legend(loc='lower right')
-        plt.show()
-
-class Assignment:
-    ''' A Facade that implements each assignment question coordinating with the objects
-        required to solve each question of the assignment '''
-
-    SAVE_DIR = 'plots/'
-
-    # predicate "to save or not to save" run statistics on disk
-    save_statistics = False 
-
     def evaluate_action_selectors(self, action_selectors, runs, max_steps, arm_count):  
         ''' collects performance statistics of each action_selector
             and plots the attributes avg reward and avg fraction of optimal actions '''
@@ -213,17 +211,15 @@ class Assignment:
         rewards = [] 
         optimality = []
 
-        data_monger = DataMongerer()
-
         for action_selector in action_selectors:
 
             # gather the avg reward and avg fraction of optimal actions of an action_selector
-            avg_r, avg_o = data_monger.get_mean_run_statistics(action_selector, arm_count, runs, max_steps)
+            avg_r, avg_o = self._get_mean_run_statistics(action_selector, arm_count, runs, max_steps)
 
             rewards.append(avg_r)
             optimality.append(avg_o)
 
-            if Assignment.save_statistics == True:
+            if DataMongerer.save_statistics == True:
                 np.savetxt(Assignment.SAVE_DIR + 'rewards'+ action_selector +'.txt', avg_r, fmt='%.2f')
                 np.savetxt(Assignment.SAVE_DIR + 'optimality'+ action_selector +'.txt', avg_o, fmt='%.2f')
 
@@ -249,12 +245,10 @@ if __name__ == '__main__':
     TEMPERTATURES = [0.001,0.1, 0.15, 0.2, 0.25]
     UCB_PARAMS = [0.4, 1, 2]
 
-    # instantiate a list of epsilon greedy action selectors to be evaluated  
+    # instantiate a suite of actions selectors to be evaluated  
     eps_greedy_selectors = [EpsilonGreedySelector(epsilon) for epsilon in EPSILONS]
-    softmax_selectors = [SoftmaxSelector(t) for t in TEMPERTATURES] 
-    ucb_selectors = [UCB_selector(c) for c in UCB_PARAMS]
+    softmax_selectors    = [SoftmaxSelector(t) for t in TEMPERTATURES] 
+    ucb_selectors        = [UCB_selector(c) for c in UCB_PARAMS]
 
-    driver = Assignment()
-    driver.evaluate_action_selectors(ucb_selectors, RUNS, MAX_STEPS, ARM_COUNT) 
-
-
+    mongerer = DataMongerer()
+    mongerer.evaluate_action_selectors(eps_greedy_selectors, RUNS, MAX_STEPS, ARM_COUNT) 
