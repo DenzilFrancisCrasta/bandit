@@ -66,7 +66,7 @@ class UCB_selector(ActionSelector):
         return np.argmax( value_estimates + np.asarray(variance_factors).reshape(value_estimates.shape))
 
     def __str__(self):
-        return 'UCB c=' + str(self.temperature)
+        return 'UCB c=' + str(self.c)
 
 class SoftmaxSelector(ActionSelector):
     ''' Softmax Action Selector '''
