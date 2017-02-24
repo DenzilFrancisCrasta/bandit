@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import random
+import math
 
 class Bandit:
     ''' Simulates a multi-arm Bandit 
@@ -28,7 +29,7 @@ class Bandit:
 
 class ActionSelector:
     ''' Abstract Action Selector that defines the interface for the strategy action selector methods '''
-    def select_action(self, value_estimates):
+    def select_action(self, value_estimates, pull_counts, step):
         pass
 
 # concrete strategies 
@@ -37,7 +38,7 @@ class EpsilonGreedySelector(ActionSelector):
     def __init__(self, epsilon = 0.1):
         self.epsilon = epsilon
 
-    def select_action(self, value_estimates):
+    def select_action(self, value_estimates, pull_counts, step):
         # With probability epsilon EXPLORE choose an arm among all arms uniformly 
         if random.random() <= self.epsilon:
            action = random.randint(0, value_estimates.shape[0]-1)  
@@ -49,6 +50,23 @@ class EpsilonGreedySelector(ActionSelector):
 
     def __str__(self):
         return 'Epsilon ' + str(self.epsilon)
+
+class UCB_selector(ActionSelector):
+    def __init__(self, c):
+        self.c = c
+
+    def select_action(self, value_estimates, pull_counts, step):
+        # if any of the arms has not yet been pulled then pull it
+        # this ensures that all arms are tried first atleast once
+        for i, count in enumerate(pull_counts):
+            if count == 0:
+                return i
+        
+        variance_factors = [ self.c * math.sqrt( math.log(step) / float(count)) for count in pull_counts]
+        return np.argmax( value_estimates + np.asarray(variance_factors).reshape(value_estimates.shape))
+
+    def __str__(self):
+        return 'UCB c=' + str(self.temperature)
 
 class SoftmaxSelector(ActionSelector):
     ''' Softmax Action Selector '''
@@ -73,7 +91,7 @@ class SoftmaxSelector(ActionSelector):
         return np.searchsorted(cdf, u)
         
 
-    def select_action(self, value_estimates):
+    def select_action(self, value_estimates, pull_counts, step):
         tempered_values = value_estimates / float(self.temperature) 
 
         # calculate the softmax probabilites of each action 
@@ -84,6 +102,7 @@ class SoftmaxSelector(ActionSelector):
 
     def __str__(self):
         return 'Temperature ' + str(self.temperature)
+
 
 class ActionValueEstimator:
     ''' Estimates the action values of the arms of a mult-armed Bandit 
@@ -115,7 +134,7 @@ class ActionValueEstimator:
 
         for step in xrange(self.max_steps):
             # select an arm using the strategy action selection routine
-            action = self.action_selector.select_action(value_estimates)
+            action = self.action_selector.select_action(value_estimates, pull_count, step)
 
             # get reward associated with the arm 
             reward = self.bandit.pull_arm(action) 
@@ -228,12 +247,14 @@ if __name__ == '__main__':
     ARM_COUNT = 10
     EPSILONS  = [0.1, 0.01, 0]
     TEMPERTATURES = [0.001,0.1, 0.15, 0.2, 0.25]
+    UCB_PARAMS = [0.4, 1, 2]
 
     # instantiate a list of epsilon greedy action selectors to be evaluated  
     eps_greedy_selectors = [EpsilonGreedySelector(epsilon) for epsilon in EPSILONS]
     softmax_selectors = [SoftmaxSelector(t) for t in TEMPERTATURES] 
+    ucb_selectors = [UCB_selector(c) for c in UCB_PARAMS]
 
     driver = Assignment()
-    driver.evaluate_action_selectors(softmax_selectors, RUNS, MAX_STEPS, ARM_COUNT) 
+    driver.evaluate_action_selectors(ucb_selectors, RUNS, MAX_STEPS, ARM_COUNT) 
 
 
